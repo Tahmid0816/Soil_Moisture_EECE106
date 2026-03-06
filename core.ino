@@ -27,23 +27,24 @@ void setup() {
 }
 
 void loop() {
-  // Sweep from 5kHz to 100kHz
-  for (uint32_t freq = 5000; freq <= 100000; freq += 10000) {
-    AD.setFrequency(freq);
-    delay(50); // Stabilization delay
-    
-    float p2p = getPeakToPeak();
-    int moisturePercent = mapMoisture(p2p);
+  // Step 1: Measure High Frequency (Moisture)
+  AD.setFrequency(100000);
+  delay(50);
+  float moistureVal = getPeakToPeak();
 
-    Serial.print(freq);
-    Serial.print("\t\t| ");
-    Serial.print(p2p);
-    Serial.print("\t\t| ");
-    Serial.println(moisturePercent);
-  }
+  // Step 2: Measure Low Frequency (Salinity Sensitivity)
+  AD.setFrequency(5000);
+  delay(50);
+  float salinitySensitivityVal = getPeakToPeak();
 
-  Serial.println("--- Sweep Complete. Resting... ---");
-  delay(5000); 
+  // Step 3: Calculate the Ratio
+  // If this number grows, your soil is getting saltier
+  float saltIndex = salinitySensitivityVal / moistureVal;
+
+  Serial.print("Moisture: "); Serial.print(moistureVal);
+  Serial.print(" | Salinity Index: "); Serial.println(saltIndex);
+  
+  delay(2000);
 }
 
 // Function to find the "Height" of the AC Sine wave
@@ -63,8 +64,8 @@ float getPeakToPeak() {
 // Calibration Mapper
 int mapMoisture(float currentP2P) {
   // Update these after your first 'Dry' and 'Wet' test!
-  float airValue = 230.0;   
-  float waterValue = 310.0; 
+  float airValue = 150.0;   
+  float waterValue = 1700.0; 
   
   int percent = map((int)currentP2P, (int)airValue, (int)waterValue, 0, 100);
   return constrain(percent, 0, 100);
