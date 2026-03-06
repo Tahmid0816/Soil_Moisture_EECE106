@@ -63,8 +63,8 @@ float getPeakToPeak() {
 // Calibration Mapper
 int mapMoisture(float currentP2P) {
   // Update these after your first 'Dry' and 'Wet' test!
-  float airValue = 230.0;   
-  float waterValue = 310.0; 
+  float airValue = 150.0;   
+  float waterValue = 1700.0; 
   
   int percent = map((int)currentP2P, (int)airValue, (int)waterValue, 0, 100);
   return constrain(percent, 0, 100);
