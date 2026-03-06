@@ -26,46 +26,6 @@ void setup() {
 }
 
 void loop() {
-  // 1. Measure High Freq (Moisture)
-  AD.setFrequency(95000);
-  delay(50);
-  float p2p_100k = getPeakToPeak();
-
-  // 2. Measure Low Freq (Salinity)
-  AD.setFrequency(5000);
-  delay(50);
-  float p2p_5k = getPeakToPeak();
-
-  // 3. Handle Calibration Commands
-  if (Serial.available()) {
-    char cmd = Serial.read();
-    if (cmd == 'D' || cmd == 'd') {
-        airValue = p2p_100k;
-        prefs.putFloat("air", airValue);
-        Serial.println("Saved DRY Calibration.");
-    }
-    if (cmd == 'W' || cmd == 'w') {
-        waterValue = p2p_100k;
-        freshSaltRatio = p2p_5k / p2p_100k; // Save the "Fresh Water" ratio
-        prefs.putFloat("water", waterValue);
-        prefs.putFloat("salt_base", freshSaltRatio);
-        Serial.println("Saved WET Calibration & Salt Baseline.");
-    }
-  }
-
-  // 4. Calculate Corrected Values
-  int moisturePercent = constrain((int)((p2p_100k - airValue) / (waterValue - airValue) * 100.0), 0, 100);
-  
-  // Normalized Salinity: Fresh water will now show ~1.0
-  float currentRatio = p2p_5k / p2p_100k;
-  float normalizedSalinity = currentRatio / freshSaltRatio;
-
-  Serial.print("Moisture: "); Serial.print(moisturePercent); Serial.print("%");
-  Serial.print(" | Raw Ratio: "); Serial.print(currentRatio);
-  Serial.print(" | Salinity Score: "); Serial.println(normalizedSalinity);
-
-  delay(1000);
-}void loop() {
   // 1. Measure High Frequency (Moisture)
   AD.setFrequency(95000);
   delay(100); // Allow op-amp to stabilize
