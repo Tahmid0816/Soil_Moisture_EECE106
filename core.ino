@@ -9,20 +9,41 @@
 AD9833 AD(FNC_PIN);
 Preferences prefs;
 
-float airValue, waterValue, freshSaltRatio;
+float airValue95k;     // Air baseline at 95kHz
+float airValue5k;      // Air baseline at 5kHz
+float waterValue95k;   // Fresh water baseline at 95kHz
+float waterValue5k;    // Fresh water baseline at 5kHz
+float freshSaltRatio;  // Ratio of (5k/95k) in fresh water
 
 void setup() {
   Serial.begin(115200);
-  prefs.begin("soil_cal", false); 
-  airValue = prefs.getFloat("air", 150.0);
-  waterValue = prefs.getFloat("water", 1700.0);
-  freshSaltRatio = prefs.getFloat("salt_base", 1.0); // New: Stores the "Fresh Water" ratio
+  delay(1000);
 
+  // 1. Initialize Preferences (NVS Storage)
+  // "soil_cal" is the namespace, false means read/write mode
+  prefs.begin("soil_cal", false); 
+
+  // 2. Load Saved Calibration Data
+  // Syntax: getFloat("key", defaultValue)
+  airValue95k    = prefs.getFloat("air95", 150.0);   
+  airValue5k     = prefs.getFloat("air5", 150.0);    
+  waterValue95k  = prefs.getFloat("wat95", 1700.0);  
+  waterValue5k   = prefs.getFloat("wat5", 1700.0);   
+  freshSaltRatio = prefs.getFloat("salt_base", 1.0); 
+
+  // 3. Initialize Hardware
   SPI.begin();
   AD.begin();
   AD.setWave(AD9833_SINE);
-  
-  Serial.println("\n--- Pro Sensor: Dual-Frequency Mode ---");
+
+  Serial.println("\n--- Pro Sensor Initialized ---");
+  Serial.println("Memory Loaded. Current Settings:");
+  Serial.print("  Air 95k: "); Serial.println(airValue95k);
+  Serial.print("  Air 5k:  "); Serial.println(airValue5k);
+  Serial.print("  Wat 95k: "); Serial.println(waterValue95k);
+  Serial.print("  Salt Base Ratio: "); Serial.println(freshSaltRatio);
+  Serial.println("--------------------------------");
+  Serial.println("Commands: 'D' = Calibrate Air | 'W' = Calibrate Fresh Water");
 }
 
 void loop() {
