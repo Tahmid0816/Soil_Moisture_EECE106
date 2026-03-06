@@ -1,112 +1,78 @@
 #include <AD9833.h>      
 #include <SPI.h>
-#include <Preferences.h> // Library to save calibration to Flash
+#include <Preferences.h>
 
-// --- Pin Definitions ---
 #define FNC_PIN 5        
 #define ADC_PIN 34       
-#define SAMPLES 1000     // Increased samples for better stability
+#define SAMPLES 1000     
 
-// --- Global Objects ---
 AD9833 AD(FNC_PIN);
 Preferences prefs;
 
-// --- Calibration Variables ---
-float airValue;
-float waterValue;
+float airValue, waterValue, freshSaltRatio;
 
 void setup() {
   Serial.begin(115200);
-  delay(1000);
-  
-  // 1. Initialize Flash Memory
   prefs.begin("soil_cal", false); 
-  airValue = prefs.getFloat("air", 150.0);    // Default to 150 if empty
-  waterValue = prefs.getFloat("water", 1700.0); // Default to 1700 if empty
+  airValue = prefs.getFloat("air", 150.0);
+  waterValue = prefs.getFloat("water", 1700.0);
+  freshSaltRatio = prefs.getFloat("salt_base", 1.0); // New: Stores the "Fresh Water" ratio
 
-  // 2. Initialize Hardware
   SPI.begin();
   AD.begin();
   AD.setWave(AD9833_SINE);
   
-  Serial.println("\n--- Pro Soil & Salinity Sensor ---");
-  Serial.println("Commands: Send 'D' for DRY (Air) | Send 'W' for WET (Water)");
-  Serial.print("Current Cal: Air="); Serial.print(airValue);
-  Serial.print(" | Water="); Serial.println(waterValue);
+  Serial.println("\n--- Pro Sensor: Dual-Frequency Mode ---");
 }
 
 void loop() {
-  // Check for Calibration Commands
-  handleCalibration();
+  // 1. Measure High Freq (Moisture)
+  AD.setFrequency(95000);
+  delay(50);
+  float p2p_100k = getPeakToPeak();
 
-  // Sweep and Calculate
-  Serial.println("\nFreq(Hz)\t| P2P\t| Moisture%\t| Salt-Idx");
-  Serial.println("---------------------------------------------------------");
+  // 2. Measure Low Freq (Salinity)
+  AD.setFrequency(5000);
+  delay(50);
+  float p2p_5k = getPeakToPeak();
 
-  float p2p_5k = 0;
-  float p2p_100k = 0;
-
-  for (uint32_t freq = 5000; freq <= 100000; freq += 45000) { // Test 5k, 50k, 95k
-    AD.setFrequency(freq);
-    delay(50);
-    
-    float p2p = getPeakToPeak();
-    
-    // Store specific values for Salinity Index
-    if (freq == 5000) p2p_5k = p2p;
-    if (freq >= 95000) p2p_100k = p2p;
-
-    int moisturePercent = calculateMoisture(p2p);
-    
-    Serial.print(freq);
-    Serial.print("\t| ");
-    Serial.print(p2p, 0);
-    Serial.print("\t| ");
-    Serial.print(moisturePercent);
-    Serial.println("%");
+  // 3. Handle Calibration Commands
+  if (Serial.available()) {
+    char cmd = Serial.read();
+    if (cmd == 'D' || cmd == 'd') {
+        airValue = p2p_100k;
+        prefs.putFloat("air", airValue);
+        Serial.println("Saved DRY Calibration.");
+    }
+    if (cmd == 'W' || cmd == 'w') {
+        waterValue = p2p_100k;
+        freshSaltRatio = p2p_5k / p2p_100k; // Save the "Fresh Water" ratio
+        prefs.putFloat("water", waterValue);
+        prefs.putFloat("salt_base", freshSaltRatio);
+        Serial.println("Saved WET Calibration & Salt Baseline.");
+    }
   }
 
-  // Calculate Salinity Index (Ratio of Low Freq to High Freq)
-  float saltIndex = p2p_5k / p2p_100k;
-  Serial.print("--- SALINITY INDEX: "); Serial.println(saltIndex, 2);
+  // 4. Calculate Corrected Values
+  int moisturePercent = constrain((int)((p2p_100k - airValue) / (waterValue - airValue) * 100.0), 0, 100);
+  
+  // Normalized Salinity: Fresh water will now show ~1.0
+  float currentRatio = p2p_5k / p2p_100k;
+  float normalizedSalinity = currentRatio / freshSaltRatio;
 
-  delay(3000); 
+  Serial.print("Moisture: "); Serial.print(moisturePercent); Serial.print("%");
+  Serial.print(" | Raw Ratio: "); Serial.print(currentRatio);
+  Serial.print(" | Salinity Score: "); Serial.println(normalizedSalinity);
+
+  delay(1000);
 }
 
-// --- Helper Functions ---
-
 float getPeakToPeak() {
-  uint32_t maxVal = 0;
-  uint32_t minVal = 4095; 
-  
+  uint32_t maxVal = 0, minVal = 4095; 
   for (int i = 0; i < SAMPLES; i++) {
     uint32_t val = analogRead(ADC_PIN);
     if (val > maxVal) maxVal = val;
     if (val < minVal) minVal = val;
   }
   return (float)(maxVal - minVal);
-}
-
-void handleCalibration() {
-  if (Serial.available() > 0) {
-    char cmd = Serial.read();
-    float currentP2P = getPeakToPeak();
-
-    if (cmd == 'D' || cmd == 'd') {
-      airValue = currentP2P;
-      prefs.putFloat("air", airValue);
-      Serial.print("\n>>> CALIBRATED DRY: "); Serial.println(airValue);
-    } 
-    else if (cmd == 'W' || cmd == 'w') {
-      waterValue = currentP2P;
-      prefs.putFloat("water", waterValue);
-      Serial.print("\n>>> CALIBRATED WET: "); Serial.println(waterValue);
-    }
-  }
-}
-
-int calculateMoisture(float currentP2P) {
-  // Linear interpolation: Percentage = (val - air) / (water - air) * 100
-  float percent = ((currentP2P - airValue) / (waterValue - airValue)) * 100.0;
-  return constrain((int)percent, 0, 100);
 }
