@@ -10,8 +10,8 @@
 #include <Preferences.h>
 
 char auth[] = BLYNK_AUTH_TOKEN;
-char ssid[] = "Your_WiFi_Name";
-char pass[] = "Your_WiFi_Password";
+char ssid[] = "Shah jalal";
+char pass[] = "shah1960";
 
 #define FNC_PIN 5        
 #define ADC_PIN 34       
