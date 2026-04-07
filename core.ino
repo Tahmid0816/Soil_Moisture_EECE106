@@ -7,9 +7,9 @@
 #include <HTTPClient.h> // Added for Google Sheets
 
 // --- WiFi & Google Sheets Setup ---
-const char* ssid = "YOUR_WIFI_NAME";
-const char* password = "YOUR_WIFI_PASSWORD";
-const char* scriptID = "https://script.google.com/macros/s/AKfycbyVIP1gXc3sCQForfdOmxLF-5OHWdsOElxXj37qHv0gfJhVKIE-S0pcZI3ZwKBdGQrZvQ/exec"; // From your Google Apps Script Deployment
+const char* ssid = "MIST";
+const char* password = "Il0veMIST";
+const char* scriptID = "AKfycbx7d6XAiikOh70nGJUEFQ7O1XiZEysTvdu6Ek7emj5GiykqKrY_nveT3Hla4xSyDvyIHA"; // From your Google Apps Script Deployment
 
 #define FNC_PIN 5        
 #define ADC_PIN 34       
@@ -161,7 +161,7 @@ void handleCommand(char cmd) {
 
     for (uint32_t freq = 5000; freq <= 95000; freq += 10000) {
       AD.setFrequency(freq);
-      delay(50);
+      delay(500);
       float p2p = getPeakToPeak();
       
       if (WiFi.status() == WL_CONNECTED) {
