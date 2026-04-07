@@ -13,8 +13,8 @@
 #define BTN_SYNC 27
 
 // --- WiFi & Google Sheets Setup ---
-const char* ssid = "MIST";
-const char* password = "Il0veMIST";
+const char* ssid = "Shah jalal";
+const char* password = "shah1960";
 const char* scriptID = "AKfycbx7d6XAiikOh70nGJUEFQ7O1XiZEysTvdu6Ek7emj5GiykqKrY_nveT3Hla4xSyDvyIHA"; 
 
 #define FNC_PIN 5        
